@@ -1,0 +1,119 @@
+dcfup() {
+  docker compose -f $1 up
+} 
+
+cdls() {
+        local dir="$1"
+        local dir="${dir:=$HOME}"
+        if [[ -d "$dir" ]]; then
+                cd "$dir" >/dev/null; ls --color=auto
+        else
+                echo "bash: cdls: $dir: Directory not found"
+        fi
+}
+
+alias eiulogs="sudo docker logs minecraft-eiuSU23"
+
+dedit() {
+        if [ $# -eq 1 ]
+        then
+                vim $HOME/docker/$1/docker-compose.yml
+        else
+                $1 $HOME/docker/$1/docker-compose.yml
+        fi
+}
+
+dup() {
+        if [ $# -eq 0 ]
+        then
+                docker compose up -d
+        else
+                docker compose -f ~/docker/$1/docker-compose.yml up -d
+        fi
+}
+
+_dup_autocomplete() {
+  local cur prev opts
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  opts=$(compgen -W "$(ls ~/docker)" -- "${cur}")
+  COMPREPLY=($(compgen -W "${opts}" -- "${cur}"))
+  return 0
+}
+
+_mc_autocomplete() {
+  local cur prev opts
+  COMPREPLY=()
+  cur="${COMP_WORDS[COMP_CWORD]}"
+  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  opts=$(compgen -W "$(ls ~/docker/minecraft)" -- "${cur}")
+  COMPREPLY=($(compgen -W "${opts}" -- "${cur}"))
+  return 0
+}
+
+
+complete -F _dup_autocomplete dup
+complete -F _dup_autocomplete dedit
+complete -F _mc_autocomplete mcup
+complete -F _mc_autocomplete mclogs
+
+alias lsd='find /docker/*.yml -exec basename {} \; | awk -F. '\''{print $1}'\'' | column'
+
+newdockerfolder() {
+  mkdir $HOME/docker/$1
+}
+
+copycomposefile() {
+  mkdir -p $HOME/docker/$1
+  sudo cp /docker/$1.yml $HOME/docker/$1/docker-compose.yml
+}
+
+markmoved() {
+  sudo mv /docker/$1.yml /docker/$1.yml.moved
+}
+
+markunused() {
+  sudo mv /docker/$1.yml /docker/$1.yml.unused
+}
+
+dnew() {
+  mkdir $HOME/docker/$1
+  vim $HOME/docker/$1/docker-compose.yml
+}
+
+mcnew() {
+  cp -R $HOME/docker/minecraft/template/. $HOME/docker/minecraft/$1/
+  sed -i "s/TEMPLATENAME/$1/g" $HOME/docker/minecraft/$1/.env
+}
+
+mcup() {
+        if [ $# -eq 0 ]
+        then
+                docker compose up -d
+        else
+                docker compose -f ~/docker/minecraft/$1/docker-compose.yml up -d
+        fi
+}
+
+. ~/.bash.d/cht.sh
+
+alias dports="docker container ls --format 'table {{.Ports}}' -a --filter publish=0-65535 | sort"
+
+dlogs() {
+  docker logs $1
+}
+
+mclogs() {
+  docker logs minecraft-$1
+}
+
+_docker_container_names() {
+        COMPREPLY=()
+        local container_names
+        container_names=$(docker ps --format "{{.Names}}" 2>/dev/null)
+
+        COMPREPLY=( $(compgen -W "$container_names" -- "${COMP_WORDS[COMP_CWORD]}") )
+}
+
+complete -F _docker_container_names dlogs
